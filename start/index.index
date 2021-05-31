@@ -1,0 +1,82 @@
+<html>
+    <script>
+        const request = window.indexedDB.open('test', 4);
+        let db = null;
+
+        let userStore = null;
+
+        request.onerror = (event) => {
+            console.log('DB 열기 실패');
+        };
+        request.onsuccess = (event) => {
+            console.log('DB 열기 성공');
+            db = event.target.result;
+            selectAll();
+        };
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            console.log('스토어 생성됨')
+            // 스토어 생성
+            db.deleteObjectStore("users");
+            userStore = db.createObjectStore("users", { keyPath: 'id', autoIncrement : true });
+        };
+
+        async function insert() {
+            const id = document.getElementById('foo').value;
+            const text = document.getElementById('bar').value;
+
+            const transaction = db.transaction(['users'], 'readwrite');
+
+            const userStore = transaction.objectStore('users');
+            userStore.add({ id, text });
+            
+            transaction.oncomplete = (event) => {
+                alert('삽입 성공')
+                window.location.reload();
+            }
+            transaction.onerror  = (event) => {
+                alert('트랜잭션 오류');
+            }
+        }
+
+        async function selectAll() {
+            const transaction = db.transaction(['users'], 'readwrite');
+            
+            const userStore = transaction.objectStore('users');
+            
+            const getAll = userStore.getAll(); 
+            getAll.onsuccess = () => {
+                const list = getAll.result;
+                const boom = document.getElementById("boom");
+
+                for(const e of list) {
+                    const li = document.createElement('li');
+                    li.appendChild(document.createTextNode(`${e.id}: ${e.text}`));
+
+                    boom.appendChild(li);
+                }
+            }
+        }
+
+        async function deleteAll() {
+            const id = document.getElementById('foo').value;
+            const text = document.getElementById('bar').value;
+
+            const transaction = db.transaction(['users'], 'readwrite');
+        
+            const userStore = transaction.objectStore('users');
+            userStore.clear().onsuccess = () => {
+                window.location.reload();
+            }
+        }
+    </script>
+    <body>
+        <h1>테스트</h1>
+        id: <input type="number" id="foo"/> <br> 
+        텍스트: <input type="text" id="bar"/> <br>
+        <button onclick="insert()">삽입</button>
+        <button onclick="deleteAll()">전부 지우기</button>
+        <hr>
+        <div id= "boom"></div>
+    </body>
+</html>
